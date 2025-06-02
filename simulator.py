@@ -117,7 +117,6 @@ class Piece:
     
     def checkMove(self, other):
         if not other: return False # uuuuuuuuuh
-        if not self.canEat(other): return False # kanibalizam
         toX, toY = other.x, other.y
         ml = [(1, 0), (-1, 0), (0, 1), (0, -1),   (1, 1), (1, -1), (-1, 1), (-1, -1)]
         if self.type == 3: return self._njort(toX, toY)
