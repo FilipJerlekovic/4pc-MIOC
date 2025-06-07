@@ -1,5 +1,5 @@
 import copy
-# TEST TEST
+# TEST TEST A
 class Piece:
     def __init__(self, x, y, pc = 0, clr = -1, chessObj = None): # Piece: -1 = out, 0 blank, 1p, 2r, 3n, 4b, 5q, 6k, Color: 0r, 1g, 2y, 3b, -1 blank
         self.type = pc
