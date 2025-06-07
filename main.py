@@ -17,6 +17,9 @@ WHITESELECT = "#a6a283"
 BLACKSELECT = "#595741"
 
 GLOBAL_DEBUG = True
+DEBUG_PIECE_CREATION = 1
+
+turnCycle = 0
 
 
 
@@ -41,8 +44,8 @@ def colorSwitch(primary1, primary2, secondary1, secondary2, check):
     elif check == primary2: return secondary2
     else: return check # nista
     
-    
-def genocid(event):
+# DEBUG METODE
+def genocid(event): # ubi na LMB
     global game, sigmar, boardButtonNames, imageCache
     if str(type(event.widget)) != "<class 'tkinter.Button'>": return -1 # ne valja
     if (str(event.widget) not in boardButtonNames): return -1
@@ -53,6 +56,33 @@ def genocid(event):
     piece.type = 0
     piece.color = -1
     sigmar[column][row].config(image = "", width = 1, height = 1)
+
+def genesis(event): # stvori pijuna trenutnog igraca na MMB
+    global game, sigmar, boardButtonNames, imageCache, DEBUG_PIECE_CREATION
+    if str(type(event.widget)) != "<class 'tkinter.Button'>": return -1 # ne valja
+    if (str(event.widget) not in boardButtonNames): return -1
+    data = event.widget.grid_info()
+    column = data["column"]
+    row = data["row"]
+    piece = game.get(column, row)
+    piece.type = DEBUG_PIECE_CREATION
+    piece.color = game.turn
+    sigmar[column][row].config(image = imageCache[str(piece)], width = 8, height = 8)
+
+def geneza(event):
+    global DEBUG_PIECE_CREATION
+    DEBUG_PIECE_CREATION = max(1, (DEBUG_PIECE_CREATION + 1) % 7)
+
+def deebug(event):
+    global game
+    game.debug()
+
+
+
+def destroyPiece(piece):
+    global game, sigmar
+    piece.type, piece.color = 0, -1
+    sigmar[piece.x][piece.y].config(image = "", height = 1, width = 1) # krađa identiteta
 
 def goyim(event):
     # TODO: dodaj način da detektiraš jesi li stisnuo na ploču ili van na druge gumbe ak ih ikada implementiram
@@ -73,9 +103,13 @@ def goyim(event):
     # print(game.turn)
     
     if attempt:
+        print(game.checkMate())
+        # print("a")
         # castling check
         if attempt[0].color == attempt[1].color and attempt[0].type == 6 and attempt[1].type == 2: # castle check
-            print("bombardiro corooridlo")
+            # print("bombardiro corooridlo")
+            # print(attempt[0], attempt[0].moved)
+            # print(attempt[1], attempt[1].moved)
             if not (attempt[0].moved or attempt[1].moved): # move check
                 print("tralalellotllarlarlalral")
                 # TODO: dodaj check check
@@ -105,8 +139,10 @@ def goyim(event):
                         # resetiraj prethodne pozicije
                         sigmar[attempt[0].x][attempt[0].y].config(image = "", height = 1, width = 1)
                         sigmar[attempt[1].x][attempt[1].y].config(image = "", height = 1, width = 1)
-                        attempt[0].copyTo(attempt[0].chessObj.get(kingPos, attempt[0].y))
+                        attempt[0].copyTo(game.get(kingPos, attempt[0].y))
+                        attempt[1].copyTo(game.get(rookPos, attempt[1].y))
                         attempt[0].type, attempt[0].color = 0, -1
+                        attempt[1].type, attempt[1].color = 0, -1
                         sigmar[kingPos][attempt[0].y].config(image = imageCache[f"{king}"], height = 8, width = 8)
                         sigmar[rookPos][attempt[1].y].config(image = imageCache[f"{rook}"], height = 8, width = 8)
                         game.get(kingPos, attempt[0].y).moved = game.get(rookPos, attempt[1].y).moved = True
@@ -118,21 +154,22 @@ def goyim(event):
                         # resetiraj prethodne pozicije
                         sigmar[attempt[0].x][attempt[0].y].config(image = "", height = 1, width = 1)
                         sigmar[attempt[1].x][attempt[1].y].config(image = "", height = 1, width = 1)
-                        attempt[0].copyTo(attempt[0].chessObj.get(attempt[0].x, kingPos))
+                        attempt[0].copyTo(game.get(attempt[0].x, kingPos))
+                        attempt[1].copyTo(game.get(attempt[1].x, rookPos))
                         attempt[0].type, attempt[0].color = 0, -1
+                        attempt[1].type, attempt[1].color = 0, -1
                         sigmar[attempt[0].x][kingPos].config(image = imageCache[f"{king}"], height = 8, width = 8)
                         sigmar[attempt[0].x][rookPos].config(image = imageCache[f"{rook}"], height = 8, width = 8)
                         game.get(attempt[0].x, kingPos).moved = game.get(attempt[1].x, kingPos).moved = True
-                # changeTurn()
+                changeTurn()
+                game.debug()
                 return
-        print(attempt[0], attempt[1])
-        
-        if attempt[1].type == 6: return # regicid je kriminal
-        if game.checkPin(attempt[0], attempt[1]): return # pokušaj regicida
-        if attempt[0].canEat(attempt[1]): return # kanibalizam
-        if (game.inDanger() and game.checkPin(attempt[0], attempt[1])): 
-            return False # i sacrifice my life for pakistan aaah linija
-        # TODO: nemoj kompletno ignorirati castleanje i en passant
+            # print("prešao")
+        # print(attempt[0], attempt[1])
+        # print(attempt[0], attempt[1])
+        # print(attempt[0].color, attempt[1].color)
+        if not game.authorizeMove(attempt[0], attempt[1]): return
+        # TODO: nemoj kompletno ignorirati en passant
 
         # provjeri za promocije
         if attempt[0].type == 1:
@@ -143,10 +180,9 @@ def goyim(event):
         sigmar[attempt[1].x][attempt[1].y].config(image = imageCache[attempt[0].stringify()], height = 8, width = 8) # krađa identiteta
         attempt[0].copyTo(attempt[1]) # pretvori prvi u drugi
         # sad ubi originalnog
-        attempt[0].type = 0
-        attempt[0].color = -1
-        sigmar[attempt[0].x][attempt[0].y].config(image = "", height = 1, width = 1)
+        destroyPiece(attempt[0])
         changeTurn()
+        while len(game.alive) != 1 and game.turn not in game.alive: changeTurn()
 
         # updateaj stanja svih kraljeva (molicu ignorirati kako)
         for i in range(len(game.board)):
@@ -168,8 +204,8 @@ selected = None # drzi "selektirani" objekt - move command zahtjeva dva klika, p
 def tkMove(piece):
     
     global selected, game, sigmar
-    game.debug()
-    print(f"DANGER {game.turn}", game.inDanger())
+    # game.debug()
+    # print(f"DANGER {game.turn}", game.inDanger())
     # print(selected, piece)
     if not selected:
         if piece.color != game.turn: # turn guard
@@ -297,5 +333,9 @@ print(sigmar[0][5].winfo_width(), sigmar[0][5].winfo_height())
 
 
 prozor.bind('<ButtonPress-1>', goyim)
-if GLOBAL_DEBUG: prozor.bind('<ButtonPress-3>', genocid)
+if GLOBAL_DEBUG: 
+    prozor.bind('<ButtonPress-3>', genocid)
+    prozor.bind('<ButtonPress-2>', genesis)
+    prozor.bind('<ButtonPress-5>', geneza)
+    prozor.bind('<ButtonPress-4>', deebug)
 prozor.mainloop()

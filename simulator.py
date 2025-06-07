@@ -1,14 +1,15 @@
 import copy
-# TEST TEST A
+# TEST TEST AB
 class Piece:
     def __init__(self, x, y, pc = 0, clr = -1, chessObj = None): # Piece: -1 = out, 0 blank, 1p, 2r, 3n, 4b, 5q, 6k, Color: 0r, 1g, 2y, 3b, -1 blank
         self.type = pc
         self.color = clr
-        self.moved = 0 # king rook
+        self.moved = False # king rook
         self.first = True # pawn
         self.x = x
         self.y = y
         self.chessObj = chessObj
+        self.doubledAt = -1 # za pawnove, rotacija kada su double moveali
 
     def copyTo(self, other): # osim x y jer ce to ubit sve
         other.type = self.type
@@ -23,10 +24,10 @@ class Piece:
 
     def __str__(self):
         return self.stringify()
-    def canEat(self, other):
-        if self.color == other.color: return False
-        # TODO: add check check
-        return True
+    # def canEat(self, other):
+    #     if self.color == other.color: return False
+    #     # TODO: add check check
+    #     return True
         
     def _checkRQB(self, move, toX, toY): # updateaj mapu napadnutih figura na ploci
         gurt = ""
@@ -79,7 +80,8 @@ class Piece:
         for i in attack:
             nx = self.x + i[0]
             ny = self.y + i[1]
-            if not (nx in range(14) and ny in range(14) or (self.chessObj.get(nx, ny).type == -1)): continue
+            if not (nx in range(14) and ny in range(14)): continue
+            if not (self.chessObj.get(nx, ny).type == -1): continue
         # double
         if self.first and self.x + move[1][0] == toX and self.y + move[1][1] == toY:
             # provjeri da je zapravo sve slobodno
@@ -132,7 +134,6 @@ class Chess:
     def __init__(self):
         self.board = []
         self.alive = [0, 1, 2, 3]
-        self.castleable = [1,1,1,1]
         self.turn = 0
     
     def get(self, x, y):
@@ -220,7 +221,7 @@ class Chess:
                 if pc.type == 6 and pc.color == who:
                     monarh = pc
                     break
-        print(monarh)
+        # print(monarh)
         # uuuuh
         for i in range(14):
             for j in range(14):
@@ -238,17 +239,48 @@ class Chess:
         second = self.board[eY][eX]
         first = self.board[sY][sX]
         cpy = copy.copy(first)
+        cpy2 = copy.copy(second)
         first.copyTo(second)
         first.type, first.color = 0, -1
 
         pin = self.inDanger() # provjera
-        print(cpy, first)
+        # print(cpy, first)
         # retrack
         cpy.copyTo(first)
-        second.type, second.color = 0, -1
-        print(first, second)
+        cpy2.copyTo(second)
+        # print(first, second)
 
         return pin
+     
+    def authorizeMove(self, p1, p2): # ne ukljucuje castling
+        if p1.color != self.turn: return False # turn guard v2
+        if p2.type == 6: return False # regicid je kriminal
+        # print("passed regicid")
+        if self.checkPin(p1, p2): return False # pokušaj regicida
+        # print("passed pin")
+        
+        if p1.color == p2.color: return False # kanibalizam, castling je coveran gore jer returna ako prodje
+        # print("passed kanibalizam")
+        # print ("passed guards")
+        if (self.inDanger() and self.checkPin(p1, p2)): 
+            return False # i sacrifice my life for pakistan aaah linija
+        return True
+    
+    def checkMate(self):
+        if not self.inDanger(): return False # lol?
+        # uuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuh
+        for i in range(14):
+            for j in range(14):
+                piece1 = self.get(j, i)
+                if piece1.type in [0, -1]: continue # lol
+                for k in range(14):
+                    for l in range(14):
+                        piece2 = self.get(l, k)
+                        if piece1.checkMove(piece2) and self.authorizeMove(piece1, piece2) and not self.checkPin(piece1, piece2): 
+                            print(f"{piece1}@({piece1.x}, {piece1.y})->{piece2}@({piece2.x}, {piece2.y})")
+                            return False # ak se pomaknes vise nisi u sahu
+        return True
+
     
 
 if __name__ == "__main__":
