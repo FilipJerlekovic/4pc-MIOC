@@ -17,6 +17,9 @@ class Piece:
         other.moved = self.moved
         other.first = self.first
     
+    def printDetail(self):
+        print(f"PIECE: {self.stringify()}\n\tCoords: (x={self.x}, y={self.y})\nHidden: doubledAt={self.doubledAt}; first = {self.first}; moved = {self.moved}")
+    
     def stringify(self):
         clr = ["R", "G", "Y", "B"]
         piece = [".","P", "R", "N", "B", "Q", "K", "x"]
@@ -62,7 +65,7 @@ class Piece:
             if (nX == toX) and (nY == toY): flag = True
         return flag
 
-    def _feudalismAndItsConsequences(self, toX, toY):
+    def _feudalismAndItsConsequences(self, toX, toY, check = False):
         #print(self.first)
         move = [ [0, -1], [0, -2]]
         attack = [[1,-1], [-1, -1]]
@@ -87,13 +90,13 @@ class Piece:
             # provjeri da je zapravo sve slobodno
             if self.chessObj.get(self.x + move[0][0], self.y + move[0][1]).type or self.chessObj.get(self.x + move[1][0], self.y + move[1][1]).type: # nesto blokira
                 return False
-            self.first = False
+            if not check: self.first = False
             return True
         #single
         if self.x + move[0][0] == toX and self.y + move[0][1] == toY: 
             if self.chessObj.get(self.x + move[0][0], self.y + move[0][1]).type: # nesto blokira
                 return False
-            self.first = False
+            if not check: self.first = False
             return True
         # attack je jedino bitan za slucajeve kada mozes jesti
         for i in attack:
@@ -102,7 +105,7 @@ class Piece:
             if not (nx in range(14) and ny in range(14)): continue
             if self.chessObj.get(nx, ny).type not in [-1, 0, 6] and self.chessObj.get(nx, ny).color != self.color:
                 if nx == toX and ny == toY: 
-                    self.first = False
+                    if not check: self.first = False
                     return True
         return False
     
@@ -117,7 +120,7 @@ class Piece:
             if (nX == toX) and (nY == toY): flag = True
         return flag
     
-    def checkMove(self, other):
+    def checkMove(self, other, check = False):
         if not other: return False # uuuuuuuuuh
         toX, toY = other.x, other.y
         ml = [(1, 0), (-1, 0), (0, 1), (0, -1),   (1, 1), (1, -1), (-1, 1), (-1, -1)]
@@ -125,7 +128,7 @@ class Piece:
         if self.type == 2: return self._checkRQB(ml[:4], toX, toY) # r
         elif self.type == 4: return self._checkRQB(ml[4:], toX, toY) # b
         elif self.type == 5: return self._checkRQB(ml, toX, toY) # q
-        elif self.type == 1: return self._feudalismAndItsConsequences(toX, toY)
+        elif self.type == 1: return self._feudalismAndItsConsequences(toX, toY, check = check)
         elif self.type == 6: return self._kingTerryTheTerrible(toX, toY)
         else: return False
             
@@ -276,12 +279,57 @@ class Chess:
                 for k in range(14):
                     for l in range(14):
                         piece2 = self.get(l, k)
-                        if piece1.checkMove(piece2) and self.authorizeMove(piece1, piece2) and not self.checkPin(piece1, piece2): 
+                        if piece1.checkMove(piece2, check=True) and self.authorizeMove(piece1, piece2) and not self.checkPin(piece1, piece2): 
                             print(f"{piece1}@({piece1.x}, {piece1.y})->{piece2}@({piece2.x}, {piece2.y})")
                             return False # ak se pomaknes vise nisi u sahu
         return True
-
     
+    def restorePiece(self, target, backup):
+        target.type = backup.type
+        target.color = backup.color
+        target.moved = backup.moved
+        target.first = backup.first
+
+    def checkAttacked(self, piece):
+        # mislim da je već jako well-established koliko su moji algoritmi debilni te necu dodati komentar na ovo
+        cpy = copy.deepcopy(piece)
+        # pronađi i assassiniraj starog kralja
+        kingcpy = None
+        for i in range(14):
+            f = False
+            for j in range(14):
+                pc = self.get(j, i)
+                if pc.type == 6 and pc.color == self.turn:
+                    kingcpy = copy.deepcopy(pc)
+                    f = True
+                    break
+            if f: break
+        if kingcpy is None:
+            raise ValueError("##################################################################")
+        print(kingcpy)
+        print(f"KING {str(kingcpy)} @ x={kingcpy.x}, y={kingcpy.y}")
+        self.board[kingcpy.y][kingcpy.x].type = 0
+        self.board[kingcpy.y][kingcpy.x].color = -1
+        print(f"EX KING {str(kingcpy)} @ x={kingcpy.x}, y={kingcpy.y}")
+
+        print(f"PRIJE: {str(piece)} @ x={piece.x}, y={piece.y}")
+        # promijeni trenutno polje u kralja
+        self.board[cpy.y][cpy.x].type = 6
+        self.board[cpy.y][cpy.x].color = self.turn
+        print(f"POSLIJE: {str(piece)} @ x={piece.x}, y={piece.y}")
+        # print("CHECK")
+        # self.debug()
+        result = self.inDanger()
+        print(kingcpy)
+        # vrati kralja na starog
+        self.restorePiece(self.board[kingcpy.y][kingcpy.x], kingcpy)
+        print(f"VRACEN KRALJ {self.board[kingcpy.y][kingcpy.x]} @ x={kingcpy.x}, y={kingcpy.y}")
+        # vrati provjereno polje na staro
+        self.restorePiece(self.board[cpy.y][cpy.x], cpy)
+        print(f"VRACEN PIECE {self.board[cpy.y][cpy.x]} @ x={cpy.x}, y={cpy.y}")
+        # print("RETURN")
+        # self.debug()
+        return result
 
 if __name__ == "__main__":
     game = Chess()

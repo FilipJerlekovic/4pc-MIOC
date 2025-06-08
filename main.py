@@ -1,5 +1,6 @@
 from tkinter import *
 from tkinter import font
+import copy
 
 from simulator import Chess, Piece
 
@@ -75,7 +76,11 @@ def geneza(event):
 
 def deebug(event):
     global game
-    game.debug()
+    data = event.widget.grid_info()
+    column = data["column"]
+    row = data["row"]
+    print(game.checkAttacked(game.get(column, row)))
+    # game.debug()
 
 
 
@@ -103,9 +108,9 @@ def goyim(event):
     # print(game.turn)
     
     if attempt:
-        print(game.checkMate())
         # print("a")
         # castling check
+        print("ATT: ", attempt[0], attempt[1])
         if attempt[0].color == attempt[1].color and attempt[0].type == 6 and attempt[1].type == 2: # castle check
             # print("bombardiro corooridlo")
             # print(attempt[0], attempt[0].moved)
@@ -116,31 +121,52 @@ def goyim(event):
                 # blank check
                 flag = True
                 if attempt[0].color in [0, 2]:
-                    for i in range(min(attempt[0].x, attempt[1].x) + 1, max(attempt[0].x, attempt[1].x) - 1):
+                    # blank check
+                    for i in range(min(attempt[0].x, attempt[1].x) + 1, max(attempt[0].x, attempt[1].x)):
                         if game.get(i, attempt[0].y).type != 0:
+                            flag = False
+                            break
+                    
+                    # gavrilo princip check
+                    for i in range(min(attempt[0].x, attempt[1].x), max(attempt[0].x, attempt[1].x)):
+                        if i == attempt[1].x: continue
+                        if game.checkAttacked(game.get(i, attempt[0].y)):
                             flag = False
                             break
                 else:
                     for i in range(min(attempt[0].y, attempt[1].y) + 1, max(attempt[0].y, attempt[1].y) - 1):
-                        if game.get(i, attempt[0].y).type != 0:
+                        if game.get(attempt[0].x, i).type != 0 :
+                            flag = False
+                            break
+
+                    for i in range(min(attempt[0].y, attempt[1].y), max(attempt[0].y, attempt[1].y)):
+                        if i == attempt[1].y: continue
+                        if game.checkAttacked(game.get(attempt[0].x, i)):
                             flag = False
                             break
                 
                 if flag: 
                     # switchaj 
+                    game.debug()
                     kingPos, rookPos = None, None
+                    attempt[0].printDetail()
+                    attempt[1].printDetail()
+                    game.debug()
                     if attempt[0].color in [0,2]:
                         kingPos = (attempt[0].x + attempt[1].x) // 2
                         rookPos = kingPos
                         if attempt[0].x < attempt[1].x: kingPos += 1
                         else: rookPos += 1
+                        print("################", kingPos, rookPos)
                         king = str(attempt[0])
                         rook = str(attempt[1])
+                        kingTarget = game.get(kingPos, attempt[0].y)
+                        rookTarget = game.get(kingPos, attempt[0].y)
                         # resetiraj prethodne pozicije
                         sigmar[attempt[0].x][attempt[0].y].config(image = "", height = 1, width = 1)
                         sigmar[attempt[1].x][attempt[1].y].config(image = "", height = 1, width = 1)
-                        attempt[0].copyTo(game.get(kingPos, attempt[0].y))
-                        attempt[1].copyTo(game.get(rookPos, attempt[1].y))
+                        attempt[0].copyTo(kingTarget)
+                        attempt[1].copyTo(rookTarget)
                         attempt[0].type, attempt[0].color = 0, -1
                         attempt[1].type, attempt[1].color = 0, -1
                         sigmar[kingPos][attempt[0].y].config(image = imageCache[f"{king}"], height = 8, width = 8)
@@ -149,6 +175,8 @@ def goyim(event):
                     else:
                         kingPos = (attempt[0].y + attempt[1].y) // 2
                         rookPos = kingPos + 1
+                        if attempt[0].y < attempt[1].y:
+                            kingPos, rookPos = rookPos, kingPos
                         king = str(attempt[0])
                         rook = str(attempt[1])
                         # resetiraj prethodne pozicije
@@ -161,11 +189,11 @@ def goyim(event):
                         sigmar[attempt[0].x][kingPos].config(image = imageCache[f"{king}"], height = 8, width = 8)
                         sigmar[attempt[0].x][rookPos].config(image = imageCache[f"{rook}"], height = 8, width = 8)
                         game.get(attempt[0].x, kingPos).moved = game.get(attempt[1].x, kingPos).moved = True
-                changeTurn()
+                    changeTurn()
                 game.debug()
                 return
             # print("prešao")
-        # print(attempt[0], attempt[1])
+        print(attempt[0], attempt[1], attempt[0].first, attempt[1].first)
         # print(attempt[0], attempt[1])
         # print(attempt[0].color, attempt[1].color)
         if not game.authorizeMove(attempt[0], attempt[1]): return
@@ -182,7 +210,18 @@ def goyim(event):
         # sad ubi originalnog
         destroyPiece(attempt[0])
         changeTurn()
-        while len(game.alive) != 1 and game.turn not in game.alive: changeTurn()
+        # provjeri jel šahmatiran igrač na potezu. Ako je, ubi sve kaj ima i voli
+        while game.checkMate():
+            game.alive.remove(game.turn)
+            # dodaj neki indikator lol
+            print("Rikno", game.turn)
+            for i in range(14):
+                for j in range(14):
+                    piece = game.get(j, i)
+                    if piece.color == game.turn:
+                        piece.color, piece.type = -1, 0
+                        sigmar[piece.x][piece.y].config(image = "", height = 1, width = 1)
+            changeTurn()
 
         # updateaj stanja svih kraljeva (molicu ignorirati kako)
         for i in range(len(game.board)):
@@ -272,7 +311,7 @@ print("Smrt fašizmu!")
 
 
 
-imageCache = {} # jer je tkinter retardiran
+imageCache = dict() # jer je tkinter retardiran
 
 for i in "PRBKNQ":
     for j in "RGBY":
@@ -294,9 +333,13 @@ for i in range(14):
 
 
 def changeTurn():
-    global turnLabel, prozor
-    game.turn += 1
-    game.turn %= 4
+    global turnLabel, prozor, game
+    # goofy aah do while
+    while True: 
+        game.turn += 1
+        game.turn %= 4
+        if game.turn in game.alive:
+            break
     turnLabel["text"] = ("TURN " + "RGYB"[game.turn])
     prozor.update()
 
@@ -304,14 +347,14 @@ def changeTurn():
 # tButton = Button(prozor, bg="#322d57", height = 5, width = 15, text = "Promijeni turn", fg="white", font=("Courier New", 10), command=changeTurn)
 # tButton.grid(row=20, column=20)
 
-def ballz():
-    global imageCache
-    imageCache.pop()
+# def ballz():
+#     global imageCache
+#     imageCache.pop()
 
 
-    # test = Button(prozor, text="Public execution", height = 5, width = 5, command=ballz)
-    # test.grid(row = 3, column=15)
-    # prozor.update()
+#     # test = Button(prozor, text="Public execution", height = 5, width = 5, command=ballz)
+#     # test.grid(row = 3, column=15)
+#     # prozor.update()
 
 """
 foto=PhotoImage(file="Kg.png")
