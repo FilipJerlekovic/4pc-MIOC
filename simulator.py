@@ -9,7 +9,6 @@ class Piece:
         self.x = x
         self.y = y
         self.chessObj = chessObj
-        self.doubledAt = -1 # za pawnove, rotacija kada su double moveali
 
     def copyTo(self, other): # osim x y jer ce to ubit sve
         other.type = self.type
@@ -18,7 +17,7 @@ class Piece:
         other.first = self.first
     
     def printDetail(self):
-        print(f"PIECE: {self.stringify()}\n\tCoords: (x={self.x}, y={self.y})\nHidden: doubledAt={self.doubledAt}; first = {self.first}; moved = {self.moved}")
+        print(f"PIECE: {self.stringify()}\n\tCoords: (x={self.x}, y={self.y})\nHidden: first = {self.first}; moved = {self.moved}")
     
     def stringify(self):
         clr = ["R", "G", "Y", "B"]
@@ -56,13 +55,18 @@ class Piece:
         return False if gurt else ret
     
     def _njort(self, toX, toY):
+        # TODO: debug whatever the fuck je ovo? Setup: R: 7 12 -> 7 10, G: 13 9 -> 11, 8 = nista
         flag = False
         move = [(-2, 1), (-2, -1), (1, -2), (1, 2), (-1, -2), (-1, 2), (2, -1), (2, 1)]
         for i in move:
             nX = self.x + i[0]
             nY = self.y + i[1]
-            if ((nX not in range(0, 14)) or (nY not in range(0, 14)) or (self.chessObj.get(nX, nY).type == -1)): continue
-            if (nX == toX) and (nY == toY): flag = True
+            if ((nX not in range(0, 14)) or (nY not in range(0, 14)) or (self.chessObj.get(nX, nY).type == -1)): 
+                # print(f"Instantiated from: {self}; continued on ({nX}, {nY})")
+                continue
+            if (nX == toX) and (nY == toY): 
+                # print(f"Instantiated from: {self}; can move to ({nX}, {nY})")
+                flag = True
         return flag
 
     def _feudalismAndItsConsequences(self, toX, toY, check = False):
@@ -90,7 +94,8 @@ class Piece:
             # provjeri da je zapravo sve slobodno
             if self.chessObj.get(self.x + move[0][0], self.y + move[0][1]).type or self.chessObj.get(self.x + move[1][0], self.y + move[1][1]).type: # nesto blokira
                 return False
-            if not check: self.first = False
+            if not check: 
+                self.first = False
             return True
         #single
         if self.x + move[0][0] == toX and self.y + move[0][1] == toY: 
@@ -98,6 +103,7 @@ class Piece:
                 return False
             if not check: self.first = False
             return True
+        
         # attack je jedino bitan za slucajeve kada mozes jesti
         for i in attack:
             nx = self.x + i[0]
@@ -228,7 +234,10 @@ class Chess:
         # uuuuh
         for i in range(14):
             for j in range(14):
-                if self.get(j, i).checkMove(monarh): return True
+                attacker = self.get(j, i)
+                if attacker.color != who and attacker.checkMove(monarh): 
+                    print(attacker)
+                    return True
         return False
     
     def checkPin(self, start, end): # lord have mercy
@@ -258,13 +267,13 @@ class Chess:
     def authorizeMove(self, p1, p2): # ne ukljucuje castling
         if p1.color != self.turn: return False # turn guard v2
         if p2.type == 6: return False # regicid je kriminal
-        # print("passed regicid")
+        print("passed regicid")
         if self.checkPin(p1, p2): return False # pokušaj regicida
-        # print("passed pin")
+        print("passed pin")
         
         if p1.color == p2.color: return False # kanibalizam, castling je coveran gore jer returna ako prodje
-        # print("passed kanibalizam")
-        # print ("passed guards")
+        print("passed kanibalizam")
+        print ("passed guards")
         if (self.inDanger() and self.checkPin(p1, p2)): 
             return False # i sacrifice my life for pakistan aaah linija
         return True
@@ -307,26 +316,26 @@ class Chess:
         if kingcpy is None:
             raise ValueError("##################################################################")
         print(kingcpy)
-        print(f"KING {str(kingcpy)} @ x={kingcpy.x}, y={kingcpy.y}")
+        # print(f"KING {str(kingcpy)} @ x={kingcpy.x}, y={kingcpy.y}")
         self.board[kingcpy.y][kingcpy.x].type = 0
         self.board[kingcpy.y][kingcpy.x].color = -1
-        print(f"EX KING {str(kingcpy)} @ x={kingcpy.x}, y={kingcpy.y}")
+        # print(f"EX KING {str(kingcpy)} @ x={kingcpy.x}, y={kingcpy.y}")
 
-        print(f"PRIJE: {str(piece)} @ x={piece.x}, y={piece.y}")
+        # print(f"PRIJE: {str(piece)} @ x={piece.x}, y={piece.y}")
         # promijeni trenutno polje u kralja
         self.board[cpy.y][cpy.x].type = 6
         self.board[cpy.y][cpy.x].color = self.turn
-        print(f"POSLIJE: {str(piece)} @ x={piece.x}, y={piece.y}")
+        # print(f"POSLIJE: {str(piece)} @ x={piece.x}, y={piece.y}")
         # print("CHECK")
         # self.debug()
         result = self.inDanger()
         print(kingcpy)
         # vrati kralja na starog
         self.restorePiece(self.board[kingcpy.y][kingcpy.x], kingcpy)
-        print(f"VRACEN KRALJ {self.board[kingcpy.y][kingcpy.x]} @ x={kingcpy.x}, y={kingcpy.y}")
+        # print(f"VRACEN KRALJ {self.board[kingcpy.y][kingcpy.x]} @ x={kingcpy.x}, y={kingcpy.y}")
         # vrati provjereno polje na staro
         self.restorePiece(self.board[cpy.y][cpy.x], cpy)
-        print(f"VRACEN PIECE {self.board[cpy.y][cpy.x]} @ x={cpy.x}, y={cpy.y}")
+        # print(f"VRACEN PIECE {self.board[cpy.y][cpy.x]} @ x={cpy.x}, y={cpy.y}")
         # print("RETURN")
         # self.debug()
         return result

@@ -1,6 +1,7 @@
 from tkinter import *
 from tkinter import font
 import copy
+import explosion
 
 from simulator import Chess, Piece
 
@@ -9,6 +10,10 @@ game = Chess()
 game.setupBoard()
 
 prozor = Tk()
+DISPLAY_WIDTH = prozor.winfo_screenwidth()
+DISPLAY_HEIGHT = prozor.winfo_screenheight()
+prozor.after(1, lambda: prozor.focus_force())
+prozor.geometry(f"850x800+{(DISPLAY_WIDTH-850)//2}+{(DISPLAY_HEIGHT-800)//2}")
 global_font=("Courier New", 5)
 prozor.option_add("*Font", global_font)
 
@@ -19,8 +24,6 @@ BLACKSELECT = "#595741"
 
 GLOBAL_DEBUG = True
 DEBUG_PIECE_CREATION = 1
-
-turnCycle = 0
 
 
 
@@ -44,6 +47,8 @@ def colorSwitch(primary1, primary2, secondary1, secondary2, check):
     if check == primary1: return secondary1
     elif check == primary2: return secondary2
     else: return check # nista
+
+
     
 # DEBUG METODE
 def genocid(event): # ubi na LMB
@@ -79,15 +84,16 @@ def deebug(event):
     data = event.widget.grid_info()
     column = data["column"]
     row = data["row"]
-    print(game.checkAttacked(game.get(column, row)))
-    # game.debug()
+    print(column, row)
+    game.debug()
 
 
 
 def destroyPiece(piece):
-    global game, sigmar
+    global game, sigmar, prozor
     piece.type, piece.color = 0, -1
     sigmar[piece.x][piece.y].config(image = "", height = 1, width = 1) # krađa identiteta
+    prozor.update()
 
 def goyim(event):
     # TODO: dodaj način da detektiraš jesi li stisnuo na ploču ili van na druge gumbe ak ih ikada implementiram
@@ -110,13 +116,13 @@ def goyim(event):
     if attempt:
         # print("a")
         # castling check
-        print("ATT: ", attempt[0], attempt[1])
+        # ("ATT: ", attempt[0], attempt[1])
         if attempt[0].color == attempt[1].color and attempt[0].type == 6 and attempt[1].type == 2: # castle check
             # print("bombardiro corooridlo")
             # print(attempt[0], attempt[0].moved)
             # print(attempt[1], attempt[1].moved)
             if not (attempt[0].moved or attempt[1].moved): # move check
-                print("tralalellotllarlarlalral")
+                # print("tralalellotllarlarlalral")
                 # TODO: dodaj check check
                 # blank check
                 flag = True
@@ -157,7 +163,7 @@ def goyim(event):
                         rookPos = kingPos
                         if attempt[0].x < attempt[1].x: kingPos += 1
                         else: rookPos += 1
-                        print("################", kingPos, rookPos)
+                        # print("################", kingPos, rookPos)
                         king = str(attempt[0])
                         rook = str(attempt[1])
                         kingTarget = game.get(kingPos, attempt[0].y)
@@ -190,15 +196,14 @@ def goyim(event):
                         sigmar[attempt[0].x][rookPos].config(image = imageCache[f"{rook}"], height = 8, width = 8)
                         game.get(attempt[0].x, kingPos).moved = game.get(attempt[1].x, kingPos).moved = True
                     changeTurn()
-                game.debug()
+                # game.debug()
                 return
             # print("prešao")
-        print(attempt[0], attempt[1], attempt[0].first, attempt[1].first)
+        # print(attempt[0], attempt[1], attempt[0].first, attempt[1].first)
         # print(attempt[0], attempt[1])
         # print(attempt[0].color, attempt[1].color)
-        if not game.authorizeMove(attempt[0], attempt[1]): return
-        # TODO: nemoj kompletno ignorirati en passant
 
+        if not game.authorizeMove(attempt[0], attempt[1]): return
         # provjeri za promocije
         if attempt[0].type == 1:
             if (attempt[0].color == 0 and attempt[0].y == 7): attempt[0].type = 5
@@ -212,6 +217,16 @@ def goyim(event):
         changeTurn()
         # provjeri jel šahmatiran igrač na potezu. Ako je, ubi sve kaj ima i voli
         while game.checkMate():
+            eX, eY = None, None
+            for i in range(14):
+                for j in range(14):
+                    if game.get(i,j).type == 6 and game.get(i,j).color == game.turn:
+                        widget = sigmar[i][j]
+                        eX = widget.winfo_x()
+                        eY = widget.winfo_y()
+            eX += (DISPLAY_WIDTH-850)//2 - 100
+            eY += (DISPLAY_HEIGHT-800)//2 - 100
+            explosion.explode(eX, eY)
             game.alive.remove(game.turn)
             # dodaj neki indikator lol
             print("Rikno", game.turn)
@@ -222,6 +237,7 @@ def goyim(event):
                         piece.color, piece.type = -1, 0
                         sigmar[piece.x][piece.y].config(image = "", height = 1, width = 1)
             changeTurn()
+            
 
         # updateaj stanja svih kraljeva (molicu ignorirati kako)
         for i in range(len(game.board)):
@@ -340,7 +356,7 @@ def changeTurn():
         game.turn %= 4
         if game.turn in game.alive:
             break
-    turnLabel["text"] = ("TURN " + "RGYB"[game.turn])
+    turnLabel["text"] = (f"TURN {'RGYB'[game.turn]}")
     prozor.update()
 
 
