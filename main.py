@@ -24,7 +24,7 @@ BLACK = "#7d7d7d"
 WHITESELECT = "#a6a283"
 BLACKSELECT = "#595741"
 
-GLOBAL_DEBUG = True
+GLOBAL_DEBUG = False
 DEBUG_PIECE_CREATION = 1
 
 
@@ -418,8 +418,8 @@ print(sigmar[0][5].winfo_width(), sigmar[0][5].winfo_height())
 
 prozor.bind('<ButtonPress-1>', goyim)
 if GLOBAL_DEBUG: 
-    prozor.bind('<ButtonPress-3>', genocid)
-    prozor.bind('<ButtonPress-2>', genesis)
-    prozor.bind('<ButtonPress-5>', geneza)
-    prozor.bind('<ButtonPress-4>', deebug)
+    prozor.bind('<Button-3>', genocid)
+    prozor.bind('a>', genesis)
+    prozor.bind('<b>', geneza)
+    # prozor.bind('<b>', deebug)
 prozor.mainloop()
