@@ -2,6 +2,8 @@ from tkinter import *
 from tkinter import font
 import copy
 import explosion
+import SoundHandler
+import win
 
 from simulator import Chess, Piece
 
@@ -114,6 +116,8 @@ def goyim(event):
     # print(game.turn)
     
     if attempt:
+        actionType = None
+        raceGuesser = attempt[1].type
         # print("a")
         # castling check
         # ("ATT: ", attempt[0], attempt[1])
@@ -123,7 +127,6 @@ def goyim(event):
             # print(attempt[1], attempt[1].moved)
             if not (attempt[0].moved or attempt[1].moved): # move check
                 # print("tralalellotllarlarlalral")
-                # TODO: dodaj check check
                 # blank check
                 flag = True
                 if attempt[0].color in [0, 2]:
@@ -151,13 +154,11 @@ def goyim(event):
                             flag = False
                             break
                 
-                if flag: 
+                if flag:
+                    # print("JAJAJAJJA")
+                    SoundHandler.onCastle()
                     # switchaj 
-                    game.debug()
                     kingPos, rookPos = None, None
-                    attempt[0].printDetail()
-                    attempt[1].printDetail()
-                    game.debug()
                     if attempt[0].color in [0,2]:
                         kingPos = (attempt[0].x + attempt[1].x) // 2
                         rookPos = kingPos
@@ -197,7 +198,6 @@ def goyim(event):
                         game.get(attempt[0].x, kingPos).moved = game.get(attempt[1].x, kingPos).moved = True
                     changeTurn()
                 # game.debug()
-                return
             # print("prešao")
         # print(attempt[0], attempt[1], attempt[0].first, attempt[1].first)
         # print(attempt[0], attempt[1])
@@ -206,10 +206,11 @@ def goyim(event):
         if not game.authorizeMove(attempt[0], attempt[1]): return
         # provjeri za promocije
         if attempt[0].type == 1:
-            if (attempt[0].color == 0 and attempt[0].y == 7): attempt[0].type = 5
-            if (attempt[0].color == 1 and attempt[0].x == 6): attempt[0].type = 5
-            if (attempt[0].color == 2 and attempt[0].y == 6): attempt[0].type = 5
-            if (attempt[0].color == 3 and attempt[0].x == 7): attempt[0].type = 5
+            if (attempt[0].color == 0 and attempt[0].y == 7) or (attempt[0].color == 1 and attempt[0].x == 6) or (attempt[0].color == 2 and attempt[0].y == 6) or (attempt[0].color == 3 and attempt[0].x == 7): 
+               attempt[0].type = 5
+               if actionType is None:
+                   actionType = "promo"
+
         sigmar[attempt[1].x][attempt[1].y].config(image = imageCache[attempt[0].stringify()], height = 8, width = 8) # krađa identiteta
         attempt[0].copyTo(attempt[1]) # pretvori prvi u drugi
         # sad ubi originalnog
@@ -226,6 +227,8 @@ def goyim(event):
                         eY = widget.winfo_y()
             eX += (DISPLAY_WIDTH-850)//2 - 100
             eY += (DISPLAY_HEIGHT-800)//2 - 100
+            actionType = "checkmate" # najnajveci prioritet lol
+            SoundHandler.onCheckmate()
             explosion.explode(eX, eY)
             game.alive.remove(game.turn)
             # dodaj neki indikator lol
@@ -237,6 +240,10 @@ def goyim(event):
                         piece.color, piece.type = -1, 0
                         sigmar[piece.x][piece.y].config(image = "", height = 1, width = 1)
             changeTurn()
+            if len(game.alive) == 1:
+                SoundHandler.win()
+                win.win(game.turn)
+                prozor.quit()
             
 
         # updateaj stanja svih kraljeva (molicu ignorirati kako)
@@ -244,15 +251,33 @@ def goyim(event):
             for j in range(len(game.board[i])):
                 for boja in game.alive:
                     if str(game.board[i][j]) == f"K{'RGYB'[boja]}":
-                        if game.inDanger(boja): 
+                        # print(sigmar[j][i].cget("image"), imageCache[f"K{'RGYB'[boja]}+"])
+                        if game.inDanger(boja) and not game.menga[boja]: 
                             print("mijenjam za", boja)
+                            game.menga[boja] = True
+                            if actionType != "checkmate": 
+                                actionType = "check" # jači prioritet od svega koliko sam skuzio
                             sigmar[j][i].config(image = imageCache[f"K{'RGYB'[boja]}+"], height = 8, width = 8)
                             prozor.update()
-                        else:
+                        elif not game.inDanger(boja):
+                            print(boja, "siguran")
+                            game.menga[boja] = False
                             sigmar[j][i].config(image = imageCache[f"K{'RGYB'[boja]}"], height = 8, width = 8)
                             prozor.update()
         attempt[1].moved = True
         prozor.update()
+        if actionType is None:
+            if raceGuesser == 0:
+                actionType = "move"
+            else:
+                actionType = "take"
+        
+        # zvuk (castle + checkmate handlano odvojeno zbog strukture koda)
+        # print(actionType)
+        if actionType == "check": SoundHandler.onCheck()
+        elif actionType == "promo": SoundHandler.onPromo()
+        elif actionType == "take": SoundHandler.onTake()
+        elif actionType == "move": SoundHandler.onMove()
 
 selected = None # drzi "selektirani" objekt - move command zahtjeva dva klika, prvi selektira objekt, drugi izvrši move command
 

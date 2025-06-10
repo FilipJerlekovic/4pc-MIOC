@@ -144,6 +144,7 @@ class Chess:
         self.board = []
         self.alive = [0, 1, 2, 3]
         self.turn = 0
+        self.menga = [False, False, False, False]
     
     def get(self, x, y):
         # print(x, y)
@@ -221,7 +222,7 @@ class Chess:
     #         return 1
         
     def inDanger(self, who=None):
-        if not who: who = self.turn
+        if who is None: who = self.turn
         # pronadi kralja onog na potezu
         monarh = None
         for i in range(14):
@@ -235,8 +236,9 @@ class Chess:
         for i in range(14):
             for j in range(14):
                 attacker = self.get(j, i)
-                if attacker.color != who and attacker.checkMove(monarh): 
-                    print(attacker)
+                # print(attacker.color, monarh.color)
+                if attacker.color != monarh.color and attacker.checkMove(monarh): 
+                    # print(attacker, who)
                     return True
         return False
     
@@ -267,13 +269,13 @@ class Chess:
     def authorizeMove(self, p1, p2): # ne ukljucuje castling
         if p1.color != self.turn: return False # turn guard v2
         if p2.type == 6: return False # regicid je kriminal
-        print("passed regicid")
+        # print("passed regicid")
         if self.checkPin(p1, p2): return False # pokušaj regicida
-        print("passed pin")
+        # print("passed pin")
         
         if p1.color == p2.color: return False # kanibalizam, castling je coveran gore jer returna ako prodje
-        print("passed kanibalizam")
-        print ("passed guards")
+        # print("passed kanibalizam")
+        # print ("passed guards")
         if (self.inDanger() and self.checkPin(p1, p2)): 
             return False # i sacrifice my life for pakistan aaah linija
         return True
@@ -315,7 +317,7 @@ class Chess:
             if f: break
         if kingcpy is None:
             raise ValueError("##################################################################")
-        print(kingcpy)
+        # print(kingcpy)
         # print(f"KING {str(kingcpy)} @ x={kingcpy.x}, y={kingcpy.y}")
         self.board[kingcpy.y][kingcpy.x].type = 0
         self.board[kingcpy.y][kingcpy.x].color = -1
