@@ -18,6 +18,7 @@ Program se pokreće pokretanjem filea main.py u verziji pythona 3 koja podržava
   - Ako zeleni kraljicom šahmatira crvenog te žuti u sljedećem potezu pojede zelenu kraljicu, šahmat je efektivno "poništen" osim ako ga neki drugi igrač ponovno ne zada do kraja kruga.
 - Prilikom izvršenog šahmata, sve figure šahmatiranog igrača se brišu s ploče
 - Ostala pravila standardnog šaha koja ne kontradiktiraju navedena su (nadam se) uvažena
+- Rohada se unosi tako da kralja pomaknemo na prijateljskog topa, pod zadovljenim kondicijama
 
 ## Licensa
 Prava nemamo, ali ako netko ovaj kod naziva svojim, već je evidentno da ima većih problema u životu uzevši u obzir da je sve u ovom projektu više nego botched te bi svakome s imalo samopoštovanja taj akt trebao biti sramotan. Dakle, tužiti - nećemo.
