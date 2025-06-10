@@ -24,7 +24,7 @@ BLACK = "#7d7d7d"
 WHITESELECT = "#a6a283"
 BLACKSELECT = "#595741"
 
-GLOBAL_DEBUG = False
+GLOBAL_DEBUG = True
 DEBUG_PIECE_CREATION = 1
 
 
@@ -44,7 +44,7 @@ for i in range(14):
         gooner.append('.')
     sigmar.append(gooner)
 
-
+SHIFT_DOWN = False
 def colorSwitch(primary1, primary2, secondary1, secondary2, check):
     if check == primary1: return secondary1
     elif check == primary2: return secondary2
@@ -65,17 +65,24 @@ def genocid(event): # ubi na LMB
     piece.color = -1
     sigmar[column][row].config(image = "", width = 1, height = 1)
 
+
 def genesis(event): # stvori pijuna trenutnog igraca na MMB
+    print("a")
     global game, sigmar, boardButtonNames, imageCache, DEBUG_PIECE_CREATION
+    print(str(type(event.widget)))
     if str(type(event.widget)) != "<class 'tkinter.Button'>": return -1 # ne valja
+    print("aa")
     if (str(event.widget) not in boardButtonNames): return -1
+    print("aaa")
     data = event.widget.grid_info()
     column = data["column"]
     row = data["row"]
     piece = game.get(column, row)
     piece.type = DEBUG_PIECE_CREATION
     piece.color = game.turn
+    print(piece)
     sigmar[column][row].config(image = imageCache[str(piece)], width = 8, height = 8)
+    prozor.update()
 
 def geneza(event):
     global DEBUG_PIECE_CREATION
@@ -419,7 +426,8 @@ print(sigmar[0][5].winfo_width(), sigmar[0][5].winfo_height())
 prozor.bind('<ButtonPress-1>', goyim)
 if GLOBAL_DEBUG: 
     prozor.bind('<Button-3>', genocid)
-    prozor.bind('a>', genesis)
-    prozor.bind('<b>', geneza)
+    prozor.bind('<Shift-Button-3>', genesis)
+    prozor.bind('<a>', geneza)
+    prozor.bind('')
     # prozor.bind('<b>', deebug)
 prozor.mainloop()
